@@ -1,0 +1,5 @@
+{
+	"messages": {
+		"COOLDOWN_MESSAGE": "Veuillez patienter, il vous reste `<duration>`s de cooldown!"
+	}
+}
