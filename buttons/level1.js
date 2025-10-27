@@ -7,7 +7,6 @@ module.exports = {
 	run: async (client, interaction) => {
 		var configServerFile = JSON.parse(fs.readFileSync(parse, "utf-8"));
 		var role = configServerFile[interaction.guild.id].rolesLevelsReactions[0]
-		console.log("coucou");
         if (!interaction.member.roles.cache.get(role)){
 			interaction.member.roles.add(role);
 			return interaction.reply({ content: `✅| ${interaction.user.username} , Tu es désormais <@&${role}>!`, ephemeral: true })

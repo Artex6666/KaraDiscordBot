@@ -2,7 +2,7 @@ const fs = require('fs');
 const chalk = require('chalk');
 
 const { PermissionsBitField } = require('discord.js');
-const { Routes } = require('discord-api-types/v9');
+const { Routes } = require('discord-api-types/v10');
 const { REST } = require('@discordjs/rest')
 
 const AsciiTable = require('ascii-table');
@@ -11,7 +11,8 @@ const table = new AsciiTable().setHeading('Slash Commands', 'Stats').setBorder('
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 
-const rest = new REST({ version: '9' }).setToken(TOKEN);
+const rest = new REST({ version: '10' }).setToken(TOKEN);
+const TARGET_GUILD_ID = process.env.GUILD_ID || '1071775065626132500';
 
 module.exports = (client) => {
 	const slashCommands = []; 
@@ -43,12 +44,10 @@ module.exports = (client) => {
 
 	(async () => {
 			try {
-				await rest.put(
-					process.env.GUILD_ID ?
-					Routes.applicationGuildCommands(CLIENT_ID, process.env.GUILD_ID) :
-					Routes.applicationCommands(CLIENT_ID), 
-					{ body: slashCommands }
-				);
+                await rest.put(
+                    Routes.applicationGuildCommands(CLIENT_ID, TARGET_GUILD_ID),
+                    { body: slashCommands }
+                );
 				console.log(chalk.yellow('Commande slash: • Activé'))
 			} catch (error) {
 				console.log(error);
