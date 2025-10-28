@@ -44,11 +44,17 @@ module.exports = (client) => {
 
 	(async () => {
 			try {
-                await rest.put(
-                    Routes.applicationGuildCommands(CLIENT_ID, TARGET_GUILD_ID),
-                    { body: slashCommands }
-                );
-				console.log(chalk.yellow('Commande slash: • Activé'))
+				// Publier uniquement sur le serveur cible
+				await rest.put(
+					Routes.applicationGuildCommands(CLIENT_ID, TARGET_GUILD_ID),
+					{ body: slashCommands }
+				);
+				// Vider les commandes globales pour éviter les doublons
+				await rest.put(
+					Routes.applicationCommands(CLIENT_ID),
+					{ body: [] }
+				);
+				console.log(chalk.yellow('Commande slash: • Activé (guild only), global vidé'))
 			} catch (error) {
 				console.log(error);
 			}

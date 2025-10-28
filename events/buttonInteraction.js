@@ -69,8 +69,9 @@ client.on('interactionCreate', async interaction => {
             const action = parts[2];
             const tradeId = parts[3];
             const ownerId = parts[4];
-            if (interaction.user.id !== ownerId) {
-                return interaction.reply({ content: `Seul l’auteur du call peut clôturer sa position.`, flags: 64 });
+            const isAdmin = interaction.member?.permissions?.has(PermissionsBitField.Flags.Administrator);
+            if (interaction.user.id !== ownerId && !isAdmin) {
+                return interaction.reply({ content: `Seul l’auteur du call (ou un admin) peut clôturer cette position.`, flags: 64 });
             }
             const callData = readJsonSafe(callDataPath);
             const guildId = interaction.guildId;
@@ -111,7 +112,10 @@ client.on('messageReactionAdd', async (reaction, user) => {
             if (t) { found = t; ownerId = uid; break; }
         }
         if (!found) return;
-        if (user.id !== ownerId) return; // only author can close
+        // Only author or admin can close via reaction
+        const member = await msg.guild.members.fetch(user.id).catch(() => null);
+        const isAdmin = member?.permissions?.has(PermissionsBitField.Flags.Administrator);
+        if (user.id !== ownerId && !isAdmin) return;
 
         if (found.status !== 'OPEN') return;
         if (emoji === '✅') found.status = 'TP';
@@ -127,24 +131,41 @@ client.on('messageReactionAdd', async (reaction, user) => {
 
         const stats = (() => {
             const g = callData[guildId];
-            // temp mutate status already set above
-            const userStats = { users: { [ownerId]: { trades: (g.users?.[ownerId]?.trades)||[] } } };
-            return {
-                total: (g.users?.[ownerId]?.trades||[]).filter(t=>t.status!=='OPEN').length,
-                ...((() => { const u = g.users?.[ownerId]; if(!u) return {winrate:0,rrSum:0}; let wins=0, rrSum=0; for(const t of u.trades){ if(t.status!=='OPEN'){ if(t.status==='TP') wins++; const signed=t.status==='TP'?t.rr:(t.status==='SL'?-1:0); rrSum += (t.risk||1)*signed; } } return { winrate: ((wins/Math.max(1,(g.users?.[ownerId]?.trades||[]).filter(t=>t.status!=='OPEN').length))*100)|0, rrSum: Math.round(rrSum*100)/100 }; })())
-            };
+            const trades = (g.users?.[ownerId]?.trades) || [];
+            const closed = trades.filter(t => t.status !== 'OPEN');
+            let wins = 0; let rrSum = 0;
+            for (const t of closed) {
+                if (t.status === 'TP') wins += 1;
+                const signed = t.status === 'TP' ? t.rr : (t.status === 'SL' ? -1 : 0);
+                const weight = (t.risk || 0) / 0.01; // risk stored as fraction (e.g. 0.015 => 1.5)
+                rrSum += weight * signed;
+            }
+            const total = closed.length;
+            const winrate = total ? Math.round((wins / total) * 100) : 0;
+            return { total, winrate, rrSum: Math.round(rrSum * 100) / 100 };
         })();
 
         const color = 0xFAA81A; // orange
+        const statusEmoji = found.status === 'TP' ? '✅' : (found.status === 'SL' ? '🛑' : '🟰');
+        const details = [
+            found.paire ? String(found.paire) : undefined,
+            found.direction ? String(found.direction) : undefined,
+            `Risque ${Math.round(((found.risk||0)/0.01)*10)/10}%`,
+            `Entrée ${found.entree}`,
+            `SL ${found.sl}`,
+            `TP ${found.tp}`,
+            `RR ${found.rr}`
+        ].filter(Boolean).join(' · ');
+
         const embed = new EmbedBuilder()
             .setColor(color)
-            .setTitle('Position clôturée')
-            .setDescription(`Statut: ${found.status}`)
+            .setTitle(`Trade clôturé: ${found.status} ${statusEmoji}`)
             .addFields(
+                { name: 'Détails', value: details, inline: false },
                 { name: 'Durée', value: `${minutes}m ${seconds}s`, inline: true },
                 { name: 'Trades', value: String(stats.total), inline: true },
                 { name: 'Winrate', value: `${stats.winrate}%`, inline: true },
-                { name: 'RR cumulé', value: String(stats.rrSum), inline: true }
+                { name: 'RR cumulé', value: String(stats.rrSum.toFixed(1)) + 'r', inline: true }
             )
             .setTimestamp();
 

@@ -47,7 +47,8 @@ function computeUserStats(callDataGuild, userId) {
     for (const t of closed) {
         if (t.status === 'TP') wins += 1;
         const signedR = t.status === 'TP' ? t.rr : (t.status === 'SL' ? -1 : 0);
-        rrSum += (t.risk || 1) * signedR;
+        const weight = (t.risk || 0) / 0.01; // 1% = 1.0, 0.5% = 0.5, 2% = 2.0
+        rrSum += weight * signedR;
     }
     return { total, winrate: total ? Math.round((wins / total) * 100) : 0, rrSum: Math.round(rrSum * 100) / 100 };
 }
@@ -239,7 +240,11 @@ module.exports = {
 
             if (image && image.url) embed.setImage(image.url);
 
-            const message = await interaction.reply({ embeds: [embed], fetchReply: true });
+            // mention follower role if exists
+            const followerRoleId = servGuild.followRoles?.[userId];
+            const contentMention = followerRoleId ? `<@&${followerRoleId}>` : null;
+
+            const message = await interaction.reply({ content: contentMention || undefined, embeds: [embed], fetchReply: true });
             try {
                 await message.react('✅');
                 await message.react('🛑');
@@ -283,6 +288,15 @@ module.exports = {
             }
             if (servGuild.userThreads) delete servGuild.userThreads[ownerOfThread];
             writeJsonSafe(servConfigPath, servCfg);
+
+            // supprimer les données/stats utilisateur (trades)
+            try {
+                const data = readJsonSafe(callDataPath);
+                if (data[guildId] && data[guildId].users && data[guildId].users[ownerOfThread]) {
+                    delete data[guildId].users[ownerOfThread];
+                    writeJsonSafe(callDataPath, data);
+                }
+            } catch (_) {}
 
             await interaction.reply({ content: `Fil et rôle suiveur supprimés.`, flags: 64 });
             try { await channel.delete('callsend delete'); } catch (_) {}
