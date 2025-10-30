@@ -61,9 +61,20 @@ function rrFromParams(direction, entry, sl, tp) {
 
 function determineDirection(entry, sl, tp) {
     const e = Number(entry), s = Number(sl), t = Number(tp);
+    if (Number.isNaN(e) || Number.isNaN(s) || Number.isNaN(t)) return null;
     if (t > e && s < e) return 'long';
     if (t < e && s > e) return 'short';
-    return t > e ? 'long' : 'short';
+    return null; // incohérent: TP et SL du même côté de l'entrée
+}
+
+function validateTradeParams(paire, risquePct, entree, sl, tp) {
+    const issues = [];
+    if (!paire || typeof paire !== 'string' || !paire.trim()) issues.push('paire invalide');
+    if (risquePct == null || Number.isNaN(Number(risquePct)) || risquePct <= 0 || risquePct > 100) issues.push('risque_pct doit être entre 0 et 100');
+    if ([entree, sl, tp].some(v => v == null || Number.isNaN(Number(v)) || Number(v) <= 0)) issues.push('entrée/SL/TP doivent être des nombres > 0');
+    const direction = determineDirection(entree, sl, tp);
+    if (!direction) issues.push('incohérence: pour long TP>entrée & SL<entrée, pour short TP<entrée & SL>entrée');
+    return { ok: issues.length === 0, issues, direction };
 }
 
 module.exports = {
@@ -172,7 +183,12 @@ module.exports = {
             const tp = Number(interaction.options.getNumber('tp'));
             const image = interaction.options.getAttachment('image');
 
-            const direction = determineDirection(entree, sl, tp);
+            const check = validateTradeParams(paire, risquePct, entree, sl, tp);
+            await interaction.deferReply({ flags: 64 }).catch(() => {});
+            if (!check.ok) {
+                return interaction.editReply({ content: `Paramètres invalides: ${check.issues.join(', ')}` });
+            }
+            const direction = check.direction;
             const rr = Math.round(rrFromParams(direction, entree, sl, tp) * 100) / 100;
 
             // Admin fast-send to fixed channel in target guild, unless inside own thread
@@ -196,9 +212,10 @@ module.exports = {
                         .setTimestamp();
 
                     if (image && image.url) embed.setImage(image.url);
-                    await channel.send({ content: `<@&${ADMIN_ROLE_TO_MENTION}> Nouveau trade!` });
+                    await channel.send({ content: `<@&${ADMIN_ROLE_TO_MENTION}> Nouveau trade!`, allowedMentions: { roles: [ADMIN_ROLE_TO_MENTION] } });
                     await channel.send({ embeds: [embed] });
-                    return interaction.reply({ content: `Call envoyé dans <#${ADMIN_SEND_CHANNEL_ID}>`, flags: 64 });
+                    await interaction.deleteReply().catch(() => {});
+                    return;
                 }
                 }
             }
@@ -206,7 +223,7 @@ module.exports = {
             // Non-admin flow: must be inside user thread
             const threadId = servGuild.userThreads[userId];
             if (!threadId || interaction.channelId !== threadId) {
-                return interaction.reply({ content: `Tu n’es pas dans ton fil. Va dans <#${INIT_ALLOWED_CHANNEL_ID}> et fais \/callsend init.`, flags: 64 });
+                return interaction.editReply({ content: `Tu n’es pas dans ton fil. Va dans <#${INIT_ALLOWED_CHANNEL_ID}> et fais \/callsend init.` });
             }
 
             const tradeId = `${Date.now()}`;
@@ -241,15 +258,12 @@ module.exports = {
 
             if (image && image.url) embed.setImage(image.url);
 
-            // mention follower role if exists, then send embed separately to ensure role ping displays
+            // mention follower role if exists, then send embed separately via channel messages (no interaction reply)
             const followerRoleId = servGuild.followRoles?.[userId];
-            let message;
             if (followerRoleId) {
-                await interaction.reply({ content: `<@&${followerRoleId}> Nouveau trade!` });
-                message = await interaction.followUp({ embeds: [embed], fetchReply: true });
-            } else {
-                message = await interaction.reply({ embeds: [embed], fetchReply: true });
+                await interaction.channel.send({ content: `<@&${followerRoleId}> Nouveau trade!`, allowedMentions: { roles: [followerRoleId] } });
             }
+            const message = await interaction.channel.send({ embeds: [embed] });
             try {
                 await message.react('✅');
                 await message.react('🛑');
@@ -264,6 +278,7 @@ module.exports = {
                 userTrades[idx].createdAt = userTrades[idx].createdAt || Date.now();
                 writeJsonSafe(callDataPath, callData);
             }
+            await interaction.deleteReply().catch(() => {});
         }
 
         if (sub === 'delete') {

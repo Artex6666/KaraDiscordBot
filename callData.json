@@ -236,6 +236,45 @@
             "messageId": "1433498031046660157",
             "createdAt": 1761842966637,
             "closedAt": 1761842972177
+          },
+          {
+            "id": "1761843623903",
+            "status": "OPEN",
+            "risk": 0.01,
+            "rr": 0.5,
+            "direction": "long",
+            "paire": "test",
+            "entree": 8,
+            "sl": 12,
+            "tp": 10,
+            "messageId": "1433500825421877358",
+            "createdAt": 1761843632289
+          },
+          {
+            "id": "1761844017850",
+            "status": "OPEN",
+            "risk": 0.1,
+            "rr": 1,
+            "direction": "long",
+            "paire": "test",
+            "entree": 5,
+            "sl": 4,
+            "tp": 6,
+            "messageId": "1433502461838102608",
+            "createdAt": 1761844021751
+          },
+          {
+            "id": "1761844505487",
+            "status": "OPEN",
+            "risk": 0.1,
+            "rr": 1,
+            "direction": "long",
+            "paire": "test",
+            "entree": 5,
+            "sl": 4,
+            "tp": 6,
+            "messageId": "1433504499724583123",
+            "createdAt": 1761844507363
           }
         ]
       }
