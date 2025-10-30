@@ -196,7 +196,8 @@ module.exports = {
                         .setTimestamp();
 
                     if (image && image.url) embed.setImage(image.url);
-                    await channel.send({ content: `<@&${ADMIN_ROLE_TO_MENTION}>`, embeds: [embed] });
+                    await channel.send({ content: `<@&${ADMIN_ROLE_TO_MENTION}> Nouveau trade!` });
+                    await channel.send({ embeds: [embed] });
                     return interaction.reply({ content: `Call envoyé dans <#${ADMIN_SEND_CHANNEL_ID}>`, flags: 64 });
                 }
                 }
@@ -240,11 +241,15 @@ module.exports = {
 
             if (image && image.url) embed.setImage(image.url);
 
-            // mention follower role if exists
+            // mention follower role if exists, then send embed separately to ensure role ping displays
             const followerRoleId = servGuild.followRoles?.[userId];
-            const contentMention = followerRoleId ? `<@&${followerRoleId}>` : null;
-
-            const message = await interaction.reply({ content: contentMention || undefined, embeds: [embed], fetchReply: true });
+            let message;
+            if (followerRoleId) {
+                await interaction.reply({ content: `<@&${followerRoleId}> Nouveau trade!` });
+                message = await interaction.followUp({ embeds: [embed], fetchReply: true });
+            } else {
+                message = await interaction.reply({ embeds: [embed], fetchReply: true });
+            }
             try {
                 await message.react('✅');
                 await message.react('🛑');

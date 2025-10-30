@@ -28,6 +28,34 @@
             "entree": 1.16359,
             "sl": 1.16644,
             "tp": 1.15421
+          },
+          {
+            "id": "1761746054395",
+            "status": "TP",
+            "risk": 0.01,
+            "rr": 2.09,
+            "direction": "long",
+            "paire": "NZDJPY",
+            "entree": 87.981,
+            "sl": 87.785,
+            "tp": 88.391,
+            "messageId": "1433091566788018269",
+            "createdAt": 1761746057562,
+            "closedAt": 1761813382295
+          },
+          {
+            "id": "1761824369666",
+            "status": "BE",
+            "risk": 0.01,
+            "rr": 2.01,
+            "direction": "short",
+            "paire": "EU",
+            "entree": 1.16257,
+            "sl": 1.16671,
+            "tp": 1.15423,
+            "messageId": "1433420042791419916",
+            "createdAt": 1761824372105,
+            "closedAt": 1761829552982
           }
         ]
       },
@@ -46,6 +74,168 @@
             "messageId": "1432671170574155896",
             "createdAt": 1761645826793,
             "closedAt": 1761659949291
+          },
+          {
+            "id": "1761722848296",
+            "status": "SL",
+            "risk": 0.01,
+            "rr": 1.53,
+            "direction": "short",
+            "paire": "nas100",
+            "entree": 21160.8,
+            "sl": 21171.9,
+            "tp": 21143.8,
+            "messageId": "1432994231529639936",
+            "createdAt": 1761722850544,
+            "closedAt": 1761723417084
+          },
+          {
+            "id": "1761734532567",
+            "status": "TP",
+            "risk": 0.01,
+            "rr": 0.99,
+            "direction": "short",
+            "paire": "nas100",
+            "entree": 26136.7,
+            "sl": 21113.6,
+            "tp": 21169.6,
+            "messageId": "1433043238813700237",
+            "createdAt": 1761734534802,
+            "closedAt": 1761737258101
+          },
+          {
+            "id": "1761740732798",
+            "status": "TP",
+            "risk": 0.01,
+            "rr": 1.22,
+            "direction": "long",
+            "paire": "Nas100",
+            "entree": 26157.8,
+            "sl": 26125.6,
+            "tp": 26197,
+            "messageId": "1433069244693876848",
+            "createdAt": 1761740735518,
+            "closedAt": 1761746245608
+          },
+          {
+            "id": "1761743182720",
+            "status": "TP",
+            "risk": 0.01,
+            "rr": 1.2,
+            "direction": "long",
+            "paire": "Nas100",
+            "entree": 26161,
+            "sl": 26131,
+            "tp": 26197,
+            "messageId": "1433079527398965451",
+            "createdAt": 1761743187535,
+            "closedAt": 1761746249077
+          },
+          {
+            "id": "1761820198394",
+            "status": "TP",
+            "risk": 0.01,
+            "rr": 1.54,
+            "direction": "long",
+            "paire": "nas100",
+            "entree": 26113.5,
+            "sl": 26094,
+            "tp": 26143.5,
+            "messageId": "1433402547502190739",
+            "createdAt": 1761820201484,
+            "closedAt": 1761822990353
+          }
+        ]
+      },
+      "366146526386585600": {
+        "trades": [
+          {
+            "id": "1761742831484",
+            "status": "OPEN",
+            "risk": 0.0025,
+            "rr": 2,
+            "direction": "long",
+            "paire": "NQ1!",
+            "entree": 26254,
+            "sl": 26244,
+            "tp": 26274,
+            "messageId": "1433078047006916810",
+            "createdAt": 1761742833751
+          },
+          {
+            "id": "1761747977166",
+            "status": "TP",
+            "risk": 0.01,
+            "rr": 2,
+            "direction": "short",
+            "paire": "NQ1!",
+            "entree": 26307.75,
+            "sl": 26326.5,
+            "tp": 26270.25,
+            "messageId": "1433099629464916011",
+            "createdAt": 1761747979693,
+            "closedAt": 1761836115954
+          },
+          {
+            "id": "1761833827017",
+            "status": "OPEN",
+            "risk": 0.0025,
+            "rr": 2.13,
+            "direction": "long",
+            "paire": "NQ1:",
+            "entree": 26052.25,
+            "sl": 25942.25,
+            "tp": 26287,
+            "messageId": "1433459710245339159",
+            "createdAt": 1761833829811
+          }
+        ]
+      },
+      "464683061703868437": {
+        "trades": [
+          {
+            "id": "1761808009231",
+            "status": "OPEN",
+            "risk": 0.01,
+            "rr": 3.13,
+            "direction": "short",
+            "paire": "ETH/USDT",
+            "entree": 3960,
+            "sl": 4000,
+            "tp": 3835,
+            "messageId": "1433351424808325120",
+            "createdAt": 1761808012368
+          },
+          {
+            "id": "1761841370489",
+            "status": "OPEN",
+            "risk": 0.01,
+            "rr": 1.94,
+            "direction": "long",
+            "paire": "BTC/USDT",
+            "entree": 106600,
+            "sl": 105000,
+            "tp": 109700,
+            "messageId": "1433491350078095402",
+            "createdAt": 1761841372919
+          }
+        ]
+      },
+      "444846310407798785": {
+        "trades": [
+          {
+            "id": "1761842963156",
+            "status": "TP",
+            "risk": 0.02,
+            "rr": 3.5,
+            "direction": "long",
+            "paire": "test",
+            "entree": 8,
+            "sl": 6,
+            "tp": 15,
+            "messageId": "1433498031046660157",
+            "createdAt": 1761842966637,
+            "closedAt": 1761842972177
           }
         ]
       }

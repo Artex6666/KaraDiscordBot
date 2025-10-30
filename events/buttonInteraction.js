@@ -171,14 +171,15 @@ client.on('messageReactionAdd', async (reaction, user) => {
 
         await msg.reply({ embeds: [embed] });
 
-        // Rename thread with cumulative RR
+        // Rename thread with cumulative RR and calls count
         try {
             const rrText = `${stats.rrSum >= 0 ? '+' : ''}${Number(stats.rrSum).toFixed(1)}r`;
             const ch = msg.channel;
             if (ch && (ch.isThread?.() || ch.type === 11 || ch.type === 12)) {
                 const member = await msg.guild.members.fetch(ownerId).catch(() => null);
                 const display = member ? member.displayName : 'Calls';
-                const newName = `${display} Calls | ${rrText}`.slice(0, 100);
+                const allCount = (callData[guildId]?.users?.[ownerId]?.trades || []).length;
+                const newName = `${display} | ${allCount} Calls | ${rrText}`.slice(0, 100);
                 await ch.setName(newName);
             }
         } catch (e) { console.log(e); }
