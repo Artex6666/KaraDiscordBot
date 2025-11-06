@@ -56,6 +56,48 @@
             "messageId": "1433420042791419916",
             "createdAt": 1761824372105,
             "closedAt": 1761829552982
+          },
+          {
+            "id": "1761901695575",
+            "status": "SL",
+            "risk": 0.01,
+            "rr": 2.42,
+            "direction": "long",
+            "paire": "CADJPY",
+            "entree": 110.141,
+            "sl": 110.039,
+            "tp": 110.388,
+            "messageId": "1433744373157335152",
+            "createdAt": 1761901697845,
+            "closedAt": 1761904001677
+          },
+          {
+            "id": "1762437730145",
+            "status": "BE",
+            "risk": 0.01,
+            "rr": 1.99,
+            "direction": "short",
+            "paire": "USOIL",
+            "entree": 59.906,
+            "sl": 60.139,
+            "tp": 59.442,
+            "messageId": "1435992664611880993",
+            "createdAt": 1762437732208,
+            "closedAt": 1762438697050
+          },
+          {
+            "id": "1762440840010",
+            "status": "BE",
+            "risk": 0.01,
+            "rr": 2.02,
+            "direction": "long",
+            "paire": "us100",
+            "entree": 25515.88,
+            "sl": 25383,
+            "tp": 25784,
+            "messageId": "1436005708461113450",
+            "createdAt": 1762440842127,
+            "closedAt": 1762441237033
           }
         ]
       },
@@ -144,6 +186,76 @@
             "messageId": "1433402547502190739",
             "createdAt": 1761820201484,
             "closedAt": 1761822990353
+          },
+          {
+            "id": "1761910302757",
+            "status": "SL",
+            "risk": 0.01,
+            "rr": 1.24,
+            "direction": "long",
+            "paire": "Nas100",
+            "entree": 26093,
+            "sl": 26062.8,
+            "tp": 26130.5,
+            "messageId": "1433780475176161392",
+            "createdAt": 1761910305072,
+            "closedAt": 1761911853082
+          },
+          {
+            "id": "1761913083450",
+            "status": "TP",
+            "risk": 0.02,
+            "rr": 1.28,
+            "direction": "long",
+            "paire": "nas100",
+            "entree": 26092.6,
+            "sl": 26062.9,
+            "tp": 26130.5,
+            "messageId": "1433792136876396658",
+            "createdAt": 1761913085456,
+            "closedAt": 1761913089285
+          },
+          {
+            "id": "1762157378399",
+            "status": "TP",
+            "risk": 0.01,
+            "rr": 0.99,
+            "direction": "long",
+            "paire": "nas100",
+            "entree": 25926.1,
+            "sl": 25910.6,
+            "tp": 25941.5,
+            "messageId": "1434816787123404894",
+            "createdAt": 1762157381218,
+            "closedAt": 1762157532560
+          },
+          {
+            "id": "1762167652728",
+            "status": "SL",
+            "risk": 0.01,
+            "rr": 1.8,
+            "direction": "short",
+            "paire": "Nas100",
+            "entree": 26040,
+            "sl": 26054.2,
+            "tp": 26014.5,
+            "messageId": "1434859879016824833",
+            "createdAt": 1762167655391,
+            "closedAt": 1762168168858
+          },
+          {
+            "id": "1762169848477",
+            "status": "SL",
+            "risk": 0.01,
+            "rr": 1.4,
+            "direction": "short",
+            "paire": "nas100",
+            "entree": 26047,
+            "sl": 26070,
+            "tp": 26014.7,
+            "messageId": "1434869087531569202",
+            "createdAt": 1762169850755,
+            "closedAt": 1762172078401
           }
         ]
       },
@@ -178,7 +290,7 @@
           },
           {
             "id": "1761833827017",
-            "status": "OPEN",
+            "status": "SL",
             "risk": 0.0025,
             "rr": 2.13,
             "direction": "long",
@@ -187,7 +299,21 @@
             "sl": 25942.25,
             "tp": 26287,
             "messageId": "1433459710245339159",
-            "createdAt": 1761833829811
+            "createdAt": 1761833829811,
+            "closedAt": 1761852002129
+          },
+          {
+            "id": "1762442106432",
+            "status": "OPEN",
+            "risk": 0.0025,
+            "rr": 2.21,
+            "direction": "short",
+            "paire": "NQ1!",
+            "entree": 25463.25,
+            "sl": 25490,
+            "tp": 25404.25,
+            "messageId": "1436011020568105123",
+            "createdAt": 1762442108941
           }
         ]
       },
@@ -208,7 +334,7 @@
           },
           {
             "id": "1761841370489",
-            "status": "OPEN",
+            "status": "TP",
             "risk": 0.01,
             "rr": 1.94,
             "direction": "long",
@@ -217,64 +343,67 @@
             "sl": 105000,
             "tp": 109700,
             "messageId": "1433491350078095402",
-            "createdAt": 1761841372919
+            "createdAt": 1761841372919,
+            "closedAt": 1761895285650
+          },
+          {
+            "id": "1761904491877",
+            "status": "SL",
+            "risk": 0.005,
+            "rr": 3.08,
+            "direction": "short",
+            "paire": "BTC/USDT",
+            "entree": 109850,
+            "sl": 110450,
+            "tp": 108000,
+            "messageId": "1433756101509251143",
+            "createdAt": 1761904494173,
+            "closedAt": 1761912384977
+          },
+          {
+            "id": "1761984920000",
+            "status": "SL",
+            "risk": 0.005,
+            "rr": 4.75,
+            "direction": "long",
+            "paire": "BTC/USDT",
+            "entree": 110100,
+            "sl": 109700,
+            "tp": 112000,
+            "messageId": "1434093445131145276",
+            "createdAt": 1761984923256,
+            "closedAt": 1762004572709
           }
         ]
       },
       "444846310407798785": {
         "trades": [
           {
-            "id": "1761842963156",
+            "id": "1762362500383",
             "status": "TP",
-            "risk": 0.02,
-            "rr": 3.5,
+            "risk": 0.01,
+            "rr": 9.66,
             "direction": "long",
-            "paire": "test",
-            "entree": 8,
-            "sl": 6,
-            "tp": 15,
-            "messageId": "1433498031046660157",
-            "createdAt": 1761842966637,
-            "closedAt": 1761842972177
+            "paire": "eurusd",
+            "entree": 1.14736,
+            "sl": 1.1466,
+            "tp": 1.1547,
+            "messageId": "1435677128053231628",
+            "createdAt": 1762362502295,
+            "closedAt": 1762436576408
           },
           {
-            "id": "1761843623903",
+            "id": "1762458403170",
             "status": "OPEN",
             "risk": 0.01,
-            "rr": 0.5,
-            "direction": "long",
-            "paire": "test",
-            "entree": 8,
-            "sl": 12,
-            "tp": 10,
-            "messageId": "1433500825421877358",
-            "createdAt": 1761843632289
-          },
-          {
-            "id": "1761844017850",
-            "status": "OPEN",
-            "risk": 0.1,
-            "rr": 1,
-            "direction": "long",
-            "paire": "test",
-            "entree": 5,
-            "sl": 4,
-            "tp": 6,
-            "messageId": "1433502461838102608",
-            "createdAt": 1761844021751
-          },
-          {
-            "id": "1761844505487",
-            "status": "OPEN",
-            "risk": 0.1,
-            "rr": 1,
-            "direction": "long",
-            "paire": "test",
-            "entree": 5,
-            "sl": 4,
-            "tp": 6,
-            "messageId": "1433504499724583123",
-            "createdAt": 1761844507363
+            "rr": 3.38,
+            "direction": "short",
+            "paire": "EURUSD",
+            "entree": 1.15455,
+            "sl": 1.156,
+            "tp": 1.14965,
+            "messageId": "1436079377677811883",
+            "createdAt": 1762458406576
           }
         ]
       }

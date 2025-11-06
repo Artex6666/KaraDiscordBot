@@ -98,7 +98,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
     try {
         if (user.bot) return;
         const emoji = reaction.emoji.name;
-        if (!['✅','🛑','🟰'].includes(emoji)) return;
+        if (!['✅','🛑','🟰','❌'].includes(emoji)) return;
         const msg = reaction.message;
         const guildId = msg.guildId;
         if (!guildId) return;
@@ -121,6 +121,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
         if (emoji === '✅') found.status = 'TP';
         if (emoji === '🛑') found.status = 'SL';
         if (emoji === '🟰') found.status = 'BE';
+        if (emoji === '❌') found.status = 'CANCEL';
         found.closedAt = Date.now();
         writeJsonSafe(callDataPath, callData);
 
@@ -132,7 +133,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
         const stats = (() => {
             const g = callData[guildId];
             const trades = (g.users?.[ownerId]?.trades) || [];
-            const closed = trades.filter(t => t.status !== 'OPEN');
+            const closed = trades.filter(t => t.status === 'TP' || t.status === 'SL' || t.status === 'BE');
             let wins = 0; let rrSum = 0;
             for (const t of closed) {
                 if (t.status === 'TP') wins += 1;
@@ -146,7 +147,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
         })();
 
         const color = 0xFAA81A; // orange
-        const statusEmoji = found.status === 'TP' ? '✅' : (found.status === 'SL' ? '🛑' : '🟰');
+        const statusEmoji = found.status === 'TP' ? '✅' : (found.status === 'SL' ? '🛑' : (found.status === 'BE' ? '🟰' : '❌'));
         const details = [
             found.paire ? String(found.paire) : undefined,
             found.direction ? String(found.direction) : undefined,
@@ -159,7 +160,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
 
         const embed = new EmbedBuilder()
             .setColor(color)
-            .setTitle(`Trade clôturé: ${found.status} ${statusEmoji}`)
+            .setTitle(found.status === 'CANCEL' ? `Trade annulé ${statusEmoji}` : `Trade clôturé: ${found.status} ${statusEmoji}`)
             .addFields(
                 { name: 'Détails', value: details, inline: false },
                 { name: 'Durée', value: `${minutes}m ${seconds}s`, inline: true },

@@ -41,7 +41,7 @@ function ensureGuildContainers(obj, guildId) {
 function computeUserStats(callDataGuild, userId) {
     const user = callDataGuild.users?.[userId];
     if (!user || !user.trades) return { total: 0, winrate: 0, rrSum: 0 };
-    const closed = user.trades.filter(t => t.status !== 'OPEN');
+    const closed = user.trades.filter(t => t.status === 'TP' || t.status === 'SL' || t.status === 'BE');
     const total = closed.length;
     let wins = 0; let rrSum = 0;
     for (const t of closed) {
@@ -268,6 +268,7 @@ module.exports = {
                 await message.react('✅');
                 await message.react('🛑');
                 await message.react('🟰');
+                await message.react('❌');
             } catch (_) {}
 
             // store message id to enable reaction-based closing
