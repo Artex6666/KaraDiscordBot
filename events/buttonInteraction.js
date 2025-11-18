@@ -141,7 +141,11 @@ client.on('messageReactionAdd', async (reaction, user) => {
                 const weight = (t.risk || 0) / 0.01; // risk stored as fraction (e.g. 0.015 => 1.5)
                 rrSum += weight * signed;
             }
-            const total = closed.length;
+            let total = closed.length;
+            // apply admin adjustments
+            const adj = g.users?.[ownerId]?.adjustments || { tradesDelta: 0, rrDelta: 0 };
+            total = Math.max(0, total + (Number(adj.tradesDelta) || 0));
+            rrSum = rrSum + (Number(adj.rrDelta) || 0);
             const winrate = total ? Math.round((wins / total) * 100) : 0;
             return { total, winrate, rrSum: Math.round(rrSum * 100) / 100 };
         })();
@@ -179,8 +183,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
             if (ch && (ch.isThread?.() || ch.type === 11 || ch.type === 12)) {
                 const member = await msg.guild.members.fetch(ownerId).catch(() => null);
                 const display = member ? member.displayName : 'Calls';
-                const allCount = (callData[guildId]?.users?.[ownerId]?.trades || []).length;
-                const newName = `${display} | ${allCount} Calls | ${rrText}`.slice(0, 100);
+                const newName = `${display} | ${stats.total} Calls | ${rrText}`.slice(0, 100);
                 await ch.setName(newName);
             }
         } catch (e) { console.log(e); }

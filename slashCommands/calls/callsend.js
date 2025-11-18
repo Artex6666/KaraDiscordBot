@@ -50,7 +50,11 @@ function computeUserStats(callDataGuild, userId) {
         const weight = (t.risk || 0) / 0.01; // 1% = 1.0, 0.5% = 0.5, 2% = 2.0
         rrSum += weight * signedR;
     }
-    return { total, winrate: total ? Math.round((wins / total) * 100) : 0, rrSum: Math.round(rrSum * 100) / 100 };
+    // apply admin adjustments if any
+    const adj = user.adjustments || { tradesDelta: 0, rrDelta: 0 };
+    const adjustedTotal = Math.max(0, total + (Number(adj.tradesDelta) || 0));
+    const adjustedRrSum = rrSum + (Number(adj.rrDelta) || 0);
+    return { total: adjustedTotal, winrate: adjustedTotal ? Math.round((wins / adjustedTotal) * 100) : 0, rrSum: Math.round(adjustedRrSum * 100) / 100 };
 }
 
 function rrFromParams(direction, entry, sl, tp) {
@@ -104,6 +108,16 @@ module.exports = {
             name: 'delete',
             description: 'Supprimer le fil de calls courant et le rôle suiveur',
             type: 1
+        },
+        {
+            name: 'edit',
+            description: 'Admin: ajuster manuellement le nombre de trades et le RR cumulé',
+            type: 1,
+            options: [
+                { name: 'user', description: 'Utilisateur cible (si hors fil)', type: 6, required: false },
+                { name: 'trades_delta', description: 'Variation du nombre de trades (peut être négatif)', type: 4, required: false },
+                { name: 'rr_delta', description: 'Variation du RR cumulé (peut être négatif)', type: 10, required: false }
+            ]
         }
     ],
     default_member_permissions: null,
@@ -321,6 +335,71 @@ module.exports = {
 
             await interaction.reply({ content: `Fil et rôle suiveur supprimés.`, flags: 64 });
             try { await channel.delete('callsend delete'); } catch (_) {}
+        }
+
+        if (sub === 'edit') {
+            // admin only
+            if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+                return interaction.reply({ content: 'Réservé aux administrateurs.', flags: 64 });
+            }
+            // determine target user: thread owner by default, else provided user
+            let targetUserId = interaction.options.getUser('user')?.id || null;
+            if (!targetUserId) {
+                const ch = interaction.channel;
+                if (ch && (ch.type === ChannelType.PublicThread || ch.type === ChannelType.PrivateThread)) {
+                    for (const [uid, tid] of Object.entries(servGuild.userThreads || {})) {
+                        if (tid === ch.id) { targetUserId = uid; break; }
+                    }
+                }
+            }
+            if (!targetUserId) {
+                return interaction.reply({ content: 'Spécifie un utilisateur ou exécute la commande dans un fil.', flags: 64 });
+            }
+            const tradesDelta = interaction.options.getInteger('trades_delta') || 0;
+            const rrDelta = interaction.options.getNumber('rr_delta') || 0;
+            if (tradesDelta === 0 && rrDelta === 0) {
+                return interaction.reply({ content: 'Rien à modifier: fournis trades_delta et/ou rr_delta.', flags: 64 });
+            }
+            const data = readJsonSafe(callDataPath);
+            if (!data[guildId]) data[guildId] = { users: {} };
+            if (!data[guildId].users[targetUserId]) data[guildId].users[targetUserId] = { trades: [] };
+            if (!data[guildId].users[targetUserId].adjustments) data[guildId].users[targetUserId].adjustments = { tradesDelta: 0, rrDelta: 0 };
+            data[guildId].users[targetUserId].adjustments.tradesDelta = (data[guildId].users[targetUserId].adjustments.tradesDelta || 0) + tradesDelta;
+            data[guildId].users[targetUserId].adjustments.rrDelta = (data[guildId].users[targetUserId].adjustments.rrDelta || 0) + rrDelta;
+            writeJsonSafe(callDataPath, data);
+
+            // if in a thread for this user, update thread name with adjusted stats
+            const threadId = servGuild.userThreads?.[targetUserId];
+            if (threadId && interaction.channelId === threadId) {
+                const stats = computeUserStats(data[guildId], targetUserId);
+                try {
+                    const rrText = `${stats.rrSum >= 0 ? '+' : ''}${Number(stats.rrSum).toFixed(1)}r`;
+                    const member = await interaction.guild.members.fetch(targetUserId).catch(() => null);
+                    const display = member ? member.displayName : 'Calls';
+                    const newName = `${display} | ${stats.total} Calls | ${rrText}`.slice(0, 100);
+                    await interaction.channel.setName(newName);
+                } catch (_) {}
+            }
+            // Send a public embed summarizing the adjustments
+            try {
+                const statsAfter = computeUserStats(data[guildId], targetUserId);
+                const admin = interaction.user;
+                const embed = new EmbedBuilder()
+                    .setColor(0xFAA81A)
+                    .setTitle('Ajustement de statistiques')
+                    .addFields(
+                        { name: 'Utilisateur', value: `<@${targetUserId}>`, inline: true },
+                        { name: 'Opérateur', value: `<@${admin.id}>`, inline: true },
+                        { name: 'Δ Trades', value: String(tradesDelta), inline: true },
+                        { name: 'Δ RR', value: String(rrDelta), inline: true },
+                        { name: 'Nouveaux trades', value: String(statsAfter.total), inline: true },
+                        { name: 'Nouveau RR cumulé', value: `${statsAfter.rrSum.toFixed(1)}r`, inline: true },
+                        { name: 'Nouveau winrate', value: `${statsAfter.winrate}%`, inline: true }
+                    )
+                    .setTimestamp();
+                await interaction.channel.send({ embeds: [embed] });
+            } catch (_) {}
+            return interaction.reply({ content: `Ajustements appliqués à <@${targetUserId}>.`, flags: 64 });
         }
     }
 };
