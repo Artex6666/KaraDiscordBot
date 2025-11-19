@@ -17,20 +17,36 @@ client.on('interactionCreate', async interaction => {
 	
 		if(!slashCommand) return client.slashCommands.delete(interaction.commandName);
 		try {
+            const safeReply = async (payload) => {
+                try {
+                    if (!interaction.deferred && !interaction.replied) {
+                        return await interaction.reply(payload);
+                    }
+                    if (interaction.deferred && !interaction.replied) {
+                        return await interaction.editReply(payload);
+                    }
+                    return await interaction.followUp(payload);
+                } catch (e) {
+                    try {
+                        if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ flags: 64 });
+                        return await interaction.editReply(payload);
+                    } catch (_) {}
+                }
+            };
 			if(slashCommand.cooldown) {
-				if(cooldown.has(`slash-${slashCommand.name}${interaction.user.id}`)) return interaction.reply({ content: config.messages["COOLDOWN_MESSAGE"].replace('<duration>', ms(cooldown.get(`slash-${slashCommand.name}${interaction.user.id}`) - Date.now(), {long : true}) ) })
+				if(cooldown.has(`slash-${slashCommand.name}${interaction.user.id}`)) return safeReply({ content: config.messages["COOLDOWN_MESSAGE"].replace('<duration>', ms(cooldown.get(`slash-${slashCommand.name}${interaction.user.id}`) - Date.now(), {long : true}) ) })
 				if(slashCommand.userPerms || slashCommand.botPerms) {
 					if(!interaction.memberPermissions.has(PermissionsBitField.resolve(slashCommand.userPerms || []))) {
 						const userPerms = new EmbedBuilder()
 						.setDescription(`🚫 ${interaction.user}, You don't have \`${slashCommand.userPerms}\` permissions to use this command!`)
 						.setColor('Red')
-						return interaction.reply({ embeds: [userPerms] })
+						return safeReply({ embeds: [userPerms] })
 					}
 					if(!interaction.guild.members.cache.get(client.user.id).permissions.has(PermissionsBitField.resolve(slashCommand.botPerms || []))) {
 						const botPerms = new EmbedBuilder()
 						.setDescription(`🚫 ${interaction.user}, I don't have \`${slashCommand.botPerms}\` permissions to use this command!`)
 						.setColor('Red')
-						return interaction.reply({ embeds: [botPerms] })
+						return safeReply({ embeds: [botPerms] })
 					}
 
 				}
@@ -46,13 +62,13 @@ client.on('interactionCreate', async interaction => {
 						const userPerms = new EmbedBuilder()
 						.setDescription(`🚫 ${interaction.user}, You don't have \`${slashCommand.userPerms}\` permissions to use this command!`)
 						.setColor('Red')
-						return interaction.reply({ embeds: [userPerms] })
+						return safeReply({ embeds: [userPerms] })
 					}
 					if(!interaction.guild.members.cache.get(client.user.id).permissions.has(PermissionsBitField.resolve(slashCommand.botPerms || []))) {
 						const botPerms = new EmbedBuilder()
 						.setDescription(`🚫 ${interaction.user}, I don't have \`${slashCommand.botPerms}\` permissions to use this command!`)
 						.setColor('Red')
-						return interaction.reply({ embeds: [botPerms] })
+						return safeReply({ embeds: [botPerms] })
 					}
 
 				}

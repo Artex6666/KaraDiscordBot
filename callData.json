@@ -14,7 +14,12 @@
             "sl": 2,
             "tp": 0.5
           }
-        ]
+        ],
+        "adjustments": {
+          "tradesDelta": 0,
+          "rrDelta": 0,
+          "winsDelta": 0
+        }
       },
       "215253595321401346": {
         "trades": [
@@ -252,8 +257,43 @@
             "messageId": "1438896005285150840",
             "createdAt": 1763129947098,
             "closedAt": 1763132412686
+          },
+          {
+            "id": "1763541476474",
+            "status": "CANCEL",
+            "risk": 0.01,
+            "rr": 1.51,
+            "direction": "short",
+            "paire": "EU",
+            "entree": 1.15785,
+            "sl": 1.1584,
+            "tp": 1.15702,
+            "shortId": "5R283E",
+            "messageId": "1440622126108508312",
+            "createdAt": 1763541482432,
+            "closedAt": 1763542468900
+          },
+          {
+            "id": "1763544080888",
+            "status": "TP",
+            "risk": 0.01,
+            "rr": 2.91,
+            "direction": "long",
+            "paire": "GBPJPY",
+            "entree": 204.328,
+            "sl": 204.185,
+            "tp": 204.744,
+            "shortId": "5SM1O8",
+            "messageId": "1440633049854513276",
+            "createdAt": 1763544086988,
+            "closedAt": 1763548578305
           }
-        ]
+        ],
+        "adjustments": {
+          "tradesDelta": 0,
+          "rrDelta": 0,
+          "winsDelta": 0
+        }
       },
       "842884925115858954": {
         "trades": [
@@ -536,8 +576,73 @@
             "messageId": "1439999519734632649",
             "createdAt": 1763393044698,
             "closedAt": 1763396368924
+          },
+          {
+            "id": "1763476721282",
+            "status": "BE",
+            "risk": 0.01,
+            "rr": 1.65,
+            "direction": "long",
+            "paire": "eurusd",
+            "entree": 1.1598,
+            "sl": 1.15929,
+            "tp": 1.16064,
+            "shortId": "4OIAO2",
+            "messageId": "1440350523449409648",
+            "createdAt": 1763476727348,
+            "closedAt": 1763479448508
+          },
+          {
+            "id": "1763536903166",
+            "status": "TP",
+            "risk": 0.01,
+            "rr": 1.69,
+            "direction": "long",
+            "paire": "eurusd",
+            "entree": 1.15862,
+            "sl": 1.1583,
+            "tp": 1.15916,
+            "shortId": "5OC7B2",
+            "messageId": "1440602930410422362",
+            "createdAt": 1763536905931,
+            "closedAt": 1763537573744
+          },
+          {
+            "id": "1763537968998",
+            "status": "SL",
+            "risk": 0.01,
+            "rr": 1.53,
+            "direction": "long",
+            "paire": "nas100",
+            "entree": 24546.3,
+            "sl": 24515.5,
+            "tp": 24593.5,
+            "shortId": "5OZ1PI",
+            "messageId": "1440607415023173675",
+            "createdAt": 1763537975105,
+            "closedAt": 1763540119542
+          },
+          {
+            "id": "1763540701203",
+            "status": "SL",
+            "risk": 0.01,
+            "rr": 1.08,
+            "direction": "long",
+            "paire": "nas100",
+            "entree": 24549,
+            "sl": 24508.8,
+            "tp": 24592.3,
+            "shortId": "5QLLW3",
+            "messageId": "1440618874918932480",
+            "createdAt": 1763540707661,
+            "closedAt": 1763543226861
           }
-        ]
+        ],
+        "adjustments": {
+          "tradesDelta": 0,
+          "rrDelta": 0,
+          "winsDelta": 0
+        }
       },
       "366146526386585600": {
         "trades": [
@@ -681,7 +786,12 @@
             "createdAt": 1762980997773,
             "closedAt": 1762981006148
           }
-        ]
+        ],
+        "adjustments": {
+          "tradesDelta": 0,
+          "rrDelta": 0,
+          "winsDelta": 0
+        }
       },
       "464683061703868437": {
         "trades": [
@@ -877,7 +987,12 @@
             "createdAt": 1763455518395,
             "closedAt": 1763468488754
           }
-        ]
+        ],
+        "adjustments": {
+          "tradesDelta": 0,
+          "rrDelta": -5,
+          "winsDelta": 0
+        }
       },
       "444846310407798785": {
         "trades": [
@@ -978,8 +1093,28 @@
             "messageId": "1440300891088617512",
             "createdAt": 1763464893959,
             "closedAt": 1763468489746
+          },
+          {
+            "id": "1763564141813",
+            "status": "CANCEL",
+            "risk": 0.01,
+            "rr": 0.33,
+            "direction": "long",
+            "paire": "test",
+            "entree": 5,
+            "sl": 2,
+            "tp": 6,
+            "shortId": "64K0S5",
+            "messageId": "1440717191505776763",
+            "createdAt": 1763564147737,
+            "closedAt": 1763564151430
           }
-        ]
+        ],
+        "adjustments": {
+          "tradesDelta": 0,
+          "rrDelta": -10.75,
+          "winsDelta": 0
+        }
       },
       "302392542077386762": {
         "trades": [
@@ -1011,7 +1146,12 @@
             "createdAt": 1762519241032,
             "closedAt": 1762519242739
           }
-        ]
+        ],
+        "adjustments": {
+          "tradesDelta": 0,
+          "rrDelta": 0,
+          "winsDelta": 0
+        }
       },
       "816021256654553138": {
         "trades": [
@@ -1028,8 +1168,66 @@
             "messageId": "1438627231110004910",
             "createdAt": 1763065862784,
             "closedAt": 1763367214255
+          },
+          {
+            "id": "1763473973889",
+            "status": "OPEN",
+            "risk": 0.1,
+            "rr": 2.61,
+            "direction": "long",
+            "paire": "btc/usd",
+            "entree": 82650,
+            "sl": 76000,
+            "tp": 100000,
+            "messageId": "1440338999066492929",
+            "createdAt": 1763473979507
+          },
+          {
+            "id": "1763474136069",
+            "status": "OPEN",
+            "risk": 0.05,
+            "rr": 2.8,
+            "direction": "long",
+            "paire": "eth/usd",
+            "entree": 2600,
+            "sl": 2100,
+            "tp": 4000,
+            "messageId": "1440339680150163536",
+            "createdAt": 1763474141931
+          },
+          {
+            "id": "1763474176157",
+            "status": "OPEN",
+            "risk": 0.05,
+            "rr": 4.38,
+            "direction": "long",
+            "paire": "sol/usd",
+            "entree": 123,
+            "sl": 110,
+            "tp": 180,
+            "messageId": "1440339833837850684",
+            "createdAt": 1763474178809
+          },
+          {
+            "id": "1763547069535",
+            "status": "OPEN",
+            "risk": 0.05,
+            "rr": 3.07,
+            "direction": "short",
+            "paire": "aster/usd",
+            "entree": 1.5,
+            "sl": 1.64,
+            "tp": 1.07,
+            "shortId": "5UE3Q7",
+            "messageId": "1440645584632414209",
+            "createdAt": 1763547075974
           }
-        ]
+        ],
+        "adjustments": {
+          "tradesDelta": 0,
+          "rrDelta": 0,
+          "winsDelta": 0
+        }
       }
     }
   }

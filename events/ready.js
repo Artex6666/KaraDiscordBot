@@ -104,13 +104,14 @@ client.on("clientReady", () => {
 						t.closedAt = Date.now();
 						writeJsonSafe(callDataPath, data);
 
-						// Recompute stats (exclude CANCEL)
+						// Recompute stats (exclude CANCEL), normalize legacy risks, include adjustments for rename only
 						const closed = (trades || []).filter(x => x.status === 'TP' || x.status === 'SL' || x.status === 'BE');
 						let wins = 0; let rrSum = 0;
 						for (const c of closed) {
 							if (c.status === 'TP') wins += 1;
 							const signed = c.status === 'TP' ? c.rr : (c.status === 'SL' ? -1 : 0);
-							const weight = (c.risk || 0) / 0.01;
+							const riskNorm = (Number(c.risk) || 0) > 1 ? (Number(c.risk) / 100) : (Number(c.risk) || 0);
+							const weight = riskNorm / 0.01;
 							rrSum += weight * signed;
 						}
 						const total = closed.length;
@@ -143,13 +144,16 @@ client.on("clientReady", () => {
 							.setTimestamp();
 						await msg.reply({ embeds: [embed] }).catch(() => {});
 
-						// Rename thread with count and RR
+						// Rename thread with count and RR (include adjustments for display)
 						try {
-							const rrText = `${rrSum >= 0 ? '+' : ''}${Number((Math.round(rrSum * 10) / 10)).toFixed(1)}r`;
+							const adj = (data[guildId]?.users?.[userId]?.adjustments) || { tradesDelta: 0, rrDelta: 0 };
+							const rrAdj = rrSum + (Number(adj.rrDelta) || 0);
+							const rrText = `${rrAdj >= 0 ? '+' : ''}${Number((Math.round(rrAdj * 10) / 10)).toFixed(1)}r`;
 							const member = await guild.members.fetch(userId).catch(() => null);
 							const display = member ? member.displayName : 'Calls';
 							const allCount = (trades || []).length;
-							const newName = `${display} | ${allCount} Calls | ${rrText}`.slice(0, 100);
+							const displayCount = Math.max(0, allCount + (Number(adj.tradesDelta) || 0));
+							const newName = `${display} | ${displayCount} Calls | ${rrText}`.slice(0, 100);
 							await thread.setName(newName).catch(() => {});
 						} catch {}
 					}

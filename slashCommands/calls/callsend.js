@@ -41,20 +41,27 @@ function ensureGuildContainers(obj, guildId) {
 function computeUserStats(callDataGuild, userId) {
     const user = callDataGuild.users?.[userId];
     if (!user || !user.trades) return { total: 0, winrate: 0, rrSum: 0 };
+    const normalizeRisk = (r) => {
+        const v = Number(r) || 0;
+        return v > 1 ? v / 100 : v; // support legacy data stored as percent (e.g., 1.5)
+    };
     const closed = user.trades.filter(t => t.status === 'TP' || t.status === 'SL' || t.status === 'BE');
-    const total = closed.length;
+    const totalClosed = closed.length;
     let wins = 0; let rrSum = 0;
     for (const t of closed) {
         if (t.status === 'TP') wins += 1;
         const signedR = t.status === 'TP' ? t.rr : (t.status === 'SL' ? -1 : 0);
-        const weight = (t.risk || 0) / 0.01; // 1% = 1.0, 0.5% = 0.5, 2% = 2.0
+        const weight = normalizeRisk(t.risk) / 0.01; // 1% = 1.0, 0.5% = 0.5, 2% = 2.0
         rrSum += weight * signedR;
     }
     // apply admin adjustments if any
-    const adj = user.adjustments || { tradesDelta: 0, rrDelta: 0 };
-    const adjustedTotal = Math.max(0, total + (Number(adj.tradesDelta) || 0));
+    const adj = user.adjustments || { tradesDelta: 0, rrDelta: 0, winsDelta: 0 };
+    const adjustedTotal = Math.max(0, totalClosed + (Number(adj.tradesDelta) || 0));
     const adjustedRrSum = rrSum + (Number(adj.rrDelta) || 0);
-    return { total: adjustedTotal, winrate: adjustedTotal ? Math.round((wins / adjustedTotal) * 100) : 0, rrSum: Math.round(adjustedRrSum * 100) / 100 };
+    const winsAdj = Math.min(Math.max(0, wins + (Number(adj.winsDelta) || 0)), totalClosed);
+    const denom = Math.max(1, totalClosed);
+    const winrate = Math.min(100, Math.max(0, Math.round((winsAdj / denom) * 100)));
+    return { total: adjustedTotal, winrate, rrSum: Math.round(adjustedRrSum * 100) / 100 };
 }
 
 function rrFromParams(direction, entry, sl, tp) {
@@ -116,7 +123,16 @@ module.exports = {
             options: [
                 { name: 'user', description: 'Utilisateur cible (si hors fil)', type: 6, required: false },
                 { name: 'trades_delta', description: 'Variation du nombre de trades (peut être négatif)', type: 4, required: false },
-                { name: 'rr_delta', description: 'Variation du RR cumulé (peut être négatif)', type: 10, required: false }
+                { name: 'rr_delta', description: 'Variation du RR cumulé (peut être négatif)', type: 10, required: false },
+                { name: 'wins_delta', description: 'Variation des gains pour le calcul du winrate (±)', type: 4, required: false }
+            ]
+        },
+        {
+            name: 'reset',
+            description: 'Admin: recalculer RR et réinitialiser les ajustements (utilisateur ou tous)',
+            type: 1,
+            options: [
+                { name: 'user', description: 'Utilisateur cible (si vide: tous ou fil courant)', type: 6, required: false }
             ]
         }
     ],
@@ -198,12 +214,16 @@ module.exports = {
             const image = interaction.options.getAttachment('image');
 
             const check = validateTradeParams(paire, risquePct, entree, sl, tp);
-            await interaction.deferReply({ flags: 64 }).catch(() => {});
             if (!check.ok) {
-                return interaction.editReply({ content: `Paramètres invalides: ${check.issues.join(', ')}` });
+                return interaction.reply({ content: `Paramètres invalides: ${check.issues.join(', ')}`, flags: 64 });
             }
             const direction = check.direction;
             const rr = Math.round(rrFromParams(direction, entree, sl, tp) * 100) / 100;
+            let acknowledged = false;
+            try {
+                await interaction.reply({ content: '...', flags: 64 });
+                acknowledged = true;
+            } catch (_) {}
 
             // Admin fast-send to fixed channel in target guild, unless inside own thread
             if (guildId === GUILD_ID && interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
@@ -228,7 +248,7 @@ module.exports = {
                     if (image && image.url) embed.setImage(image.url);
                     await channel.send({ content: `<@&${ADMIN_ROLE_TO_MENTION}> Nouveau trade!`, allowedMentions: { roles: [ADMIN_ROLE_TO_MENTION] } });
                     await channel.send({ embeds: [embed] });
-                    await interaction.deleteReply().catch(() => {});
+                    if (acknowledged) await interaction.deleteReply().catch(() => {});
                     return;
                 }
                 }
@@ -241,7 +261,8 @@ module.exports = {
             }
 
             const tradeId = `${Date.now()}`;
-            callData[guildId].users[userId].trades.push({
+            const shortId = Number(tradeId).toString(36).slice(-6).toUpperCase();
+            const newTrade = {
                 id: tradeId,
                 status: 'OPEN',
                 risk: (risquePct || 0) / 100,
@@ -250,9 +271,10 @@ module.exports = {
                 paire,
                 entree,
                 sl,
-                tp
-            });
-            writeJsonSafe(callDataPath, callData);
+                tp,
+                shortId
+            };
+            callData[guildId].users[userId].trades.push(newTrade);
 
             const stats = computeUserStats(callData[guildId], userId);
             const embed = new EmbedBuilder()
@@ -267,7 +289,7 @@ module.exports = {
                     { name: 'Take Profit (TP)', value: String(tp), inline: true },
                     { name: 'Risk/Reward (RR)', value: String(rr), inline: true }
                 )
-                .setFooter({ text: `Trades: ${stats.total} • Winrate: ${stats.winrate}% • RR cumulé: ${stats.rrSum}` })
+                .setFooter({ text: `Trades: ${stats.total} • Winrate: ${stats.winrate}% • RR cumulé: ${stats.rrSum} • ID: ${shortId}` })
                 .setTimestamp();
 
             if (image && image.url) embed.setImage(image.url);
@@ -275,15 +297,17 @@ module.exports = {
             // mention follower role if exists, then send embed separately via channel messages (no interaction reply)
             const followerRoleId = servGuild.followRoles?.[userId];
             if (followerRoleId) {
-                await interaction.channel.send({ content: `<@&${followerRoleId}> Nouveau trade!`, allowedMentions: { roles: [followerRoleId] } });
+                // envoyer la mention sans bloquer l'envoi de l'embed
+                interaction.channel.send({ content: `<@&${followerRoleId}> Nouveau trade!`, allowedMentions: { roles: [followerRoleId] } }).catch(() => {});
             }
             const message = await interaction.channel.send({ embeds: [embed] });
-            try {
-                await message.react('✅');
-                await message.react('🛑');
-                await message.react('🟰');
-                await message.react('❌');
-            } catch (_) {}
+            // ajouter les réactions en arrière-plan
+            Promise.allSettled([
+                message.react('✅'),
+                message.react('🛑'),
+                message.react('🟰'),
+                message.react('❌')
+            ]).catch(() => {});
 
             // store message id to enable reaction-based closing
             const userTrades = callData[guildId].users[userId].trades;
@@ -293,7 +317,7 @@ module.exports = {
                 userTrades[idx].createdAt = userTrades[idx].createdAt || Date.now();
                 writeJsonSafe(callDataPath, callData);
             }
-            await interaction.deleteReply().catch(() => {});
+            if (acknowledged) await interaction.deleteReply().catch(() => {});
         }
 
         if (sub === 'delete') {
@@ -342,6 +366,7 @@ module.exports = {
             if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
                 return interaction.reply({ content: 'Réservé aux administrateurs.', flags: 64 });
             }
+            await interaction.deferReply({ flags: 64 }).catch(() => {});
             // determine target user: thread owner by default, else provided user
             let targetUserId = interaction.options.getUser('user')?.id || null;
             if (!targetUserId) {
@@ -353,19 +378,21 @@ module.exports = {
                 }
             }
             if (!targetUserId) {
-                return interaction.reply({ content: 'Spécifie un utilisateur ou exécute la commande dans un fil.', flags: 64 });
+                return interaction.editReply({ content: 'Spécifie un utilisateur ou exécute la commande dans un fil.' });
             }
             const tradesDelta = interaction.options.getInteger('trades_delta') || 0;
             const rrDelta = interaction.options.getNumber('rr_delta') || 0;
-            if (tradesDelta === 0 && rrDelta === 0) {
-                return interaction.reply({ content: 'Rien à modifier: fournis trades_delta et/ou rr_delta.', flags: 64 });
+            const winsDelta = interaction.options.getInteger('wins_delta') || 0;
+            if (tradesDelta === 0 && rrDelta === 0 && winsDelta === 0) {
+                return interaction.editReply({ content: 'Rien à modifier: fournis trades_delta et/ou rr_delta et/ou wins_delta.' });
             }
             const data = readJsonSafe(callDataPath);
             if (!data[guildId]) data[guildId] = { users: {} };
             if (!data[guildId].users[targetUserId]) data[guildId].users[targetUserId] = { trades: [] };
-            if (!data[guildId].users[targetUserId].adjustments) data[guildId].users[targetUserId].adjustments = { tradesDelta: 0, rrDelta: 0 };
+            if (!data[guildId].users[targetUserId].adjustments) data[guildId].users[targetUserId].adjustments = { tradesDelta: 0, rrDelta: 0, winsDelta: 0 };
             data[guildId].users[targetUserId].adjustments.tradesDelta = (data[guildId].users[targetUserId].adjustments.tradesDelta || 0) + tradesDelta;
             data[guildId].users[targetUserId].adjustments.rrDelta = (data[guildId].users[targetUserId].adjustments.rrDelta || 0) + rrDelta;
+            data[guildId].users[targetUserId].adjustments.winsDelta = (data[guildId].users[targetUserId].adjustments.winsDelta || 0) + winsDelta;
             writeJsonSafe(callDataPath, data);
 
             // if in a thread for this user, update thread name with adjusted stats
@@ -392,6 +419,7 @@ module.exports = {
                         { name: 'Opérateur', value: `<@${admin.id}>`, inline: true },
                         { name: 'Δ Trades', value: String(tradesDelta), inline: true },
                         { name: 'Δ RR', value: String(rrDelta), inline: true },
+                        { name: 'Δ Wins (winrate)', value: String(winsDelta), inline: true },
                         { name: 'Nouveaux trades', value: String(statsAfter.total), inline: true },
                         { name: 'Nouveau RR cumulé', value: `${statsAfter.rrSum.toFixed(1)}r`, inline: true },
                         { name: 'Nouveau winrate', value: `${statsAfter.winrate}%`, inline: true }
@@ -399,7 +427,159 @@ module.exports = {
                     .setTimestamp();
                 await interaction.channel.send({ embeds: [embed] });
             } catch (_) {}
-            return interaction.reply({ content: `Ajustements appliqués à <@${targetUserId}>.`, flags: 64 });
+            return interaction.editReply({ content: `Ajustements appliqués à <@${targetUserId}>.` });
+        }
+
+        if (sub === 'reset') {
+            if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+                return interaction.reply({ content: 'Réservé aux administrateurs.', flags: 64 });
+            }
+            try {
+                await interaction.deferReply({ flags: 64 }).catch(() => {});
+                await interaction.editReply({ content: 'Reset en cours…' }).catch(() => {});
+                const data = readJsonSafe(callDataPath);
+                const targetUser = interaction.options.getUser('user');
+                const servCfgLive = readJsonSafe(servConfigPath);
+                const servGuildLive = ensureGuildContainers(servCfgLive, guildId);
+                const userThreads = servGuildLive.userThreads || {};
+
+                const targets = [];
+                if (targetUser) {
+                    targets.push(targetUser.id);
+                } else {
+                    // si dans un fil, cibler l’auteur; sinon tous les utilisateurs
+                    const ch = interaction.channel;
+                    let owner = null;
+                    if (ch && (ch.type === ChannelType.PublicThread || ch.type === ChannelType.PrivateThread)) {
+                        for (const [uid, tid] of Object.entries(userThreads)) {
+                            if (tid === ch.id) { owner = uid; break; }
+                        }
+                    }
+                    if (owner) targets.push(owner);
+                    else if (data[guildId]?.users) targets.push(...Object.keys(data[guildId].users));
+                }
+
+                let updatedTrades = 0;
+                for (const uid of targets) {
+                    if (!data[guildId]) data[guildId] = { users: {} };
+                    if (!data[guildId].users[uid]) continue;
+                    const userData = data[guildId].users[uid];
+                    for (const t of userData.trades || []) {
+                        if (t.entree != null && t.sl != null && t.tp != null) {
+                            const dir = t.direction || determineDirection(t.entree, t.sl, t.tp) || 'long';
+                            t.direction = dir;
+                            t.rr = Math.round(rrFromParams(dir, Number(t.entree), Number(t.sl), Number(t.tp)) * 100) / 100;
+                            updatedTrades++;
+                        }
+                    }
+                    // reset des ajustements
+                    userData.adjustments = { tradesDelta: 0, rrDelta: 0, winsDelta: 0 };
+                }
+                writeJsonSafe(callDataPath, data);
+
+                // Mettre à jour les noms de fils
+                for (const uid of targets) {
+                    const threadId = userThreads[uid];
+                    if (!threadId) continue;
+                    try {
+                        const thread = interaction.guild.channels.cache.get(threadId) || await interaction.guild.channels.fetch(threadId).catch(() => null);
+                        if (!thread) continue;
+                        const stats = computeUserStats(data[guildId], uid);
+                        const rrText = `${stats.rrSum >= 0 ? '+' : ''}${Number(stats.rrSum).toFixed(1)}r`;
+                        const member = await interaction.guild.members.fetch(uid).catch(() => null);
+                        const display = member ? member.displayName : 'Calls';
+                        const allCount = (data[guildId]?.users?.[uid]?.trades || []).length;
+                        const newName = `${display} | ${allCount} Calls | ${rrText}`.slice(0, 100);
+                        await thread.setName(newName).catch(() => {});
+                    } catch {}
+                }
+
+                await interaction.editReply({ content: `Reset terminé. Utilisateurs: ${targets.length}, trades recalculés: ${updatedTrades}.` }).catch(() => {});
+            } catch (e) {
+                try { await interaction.editReply({ content: `Erreur lors du reset: ${String(e.message || e)}` }); } catch (_) {}
+            }
+        }
+
+        if (sub === 'edittrade') {
+            if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+                return interaction.reply({ content: 'Réservé aux administrateurs.', flags: 64 });
+            }
+            await interaction.deferReply({ flags: 64 }).catch(() => {});
+            const shortIdInput = interaction.options.getString('id').trim().toUpperCase();
+            const newStatus = interaction.options.getString('status');
+            const explicitUser = interaction.options.getUser('user');
+            const data = readJsonSafe(callDataPath);
+            const guildData = data[guildId] || { users: {} };
+            let targetUserId = explicitUser?.id || null;
+            const servCfgLive = readJsonSafe(servConfigPath);
+            const servGuildLive = ensureGuildContainers(servCfgLive, guildId);
+            const userThreads = servGuildLive.userThreads || {};
+
+            if (!targetUserId) {
+                const ch = interaction.channel;
+                if (ch && (ch.type === ChannelType.PublicThread || ch.type === ChannelType.PrivateThread)) {
+                    for (const [uid, tid] of Object.entries(userThreads)) {
+                        if (tid === ch.id) { targetUserId = uid; break; }
+                    }
+                }
+            }
+
+            let found = null; let ownerId = null;
+            const searchUsers = targetUserId ? [targetUserId] : Object.keys(guildData.users || {});
+            for (const uid of searchUsers) {
+                const udata = guildData.users?.[uid];
+                if (!udata) continue;
+                const t = (udata.trades || []).find(tr => (tr.shortId || '').toUpperCase() === shortIdInput);
+                if (t) { found = t; ownerId = uid; break; }
+            }
+            if (!found) {
+                return interaction.editReply({ content: `Trade introuvable pour l’ID: ${shortIdInput}` });
+            }
+            if (!['TP','SL','BE'].includes(newStatus)) {
+                return interaction.editReply({ content: `Statut invalide. Utilise TP, SL ou BE.` });
+            }
+            found.status = newStatus;
+            found.closedAt = Date.now();
+            writeJsonSafe(callDataPath, data);
+
+            try {
+                const threadId = userThreads[ownerId];
+                const thread = threadId ? (interaction.guild.channels.cache.get(threadId) || await interaction.guild.channels.fetch(threadId).catch(() => null)) : null;
+                const msg = (thread && found.messageId) ? (await thread.messages.fetch(found.messageId).catch(() => null)) : null;
+                const stats = computeUserStats(data[guildId], ownerId);
+                const color = 0xFAA81A;
+                const statusEmoji = newStatus === 'TP' ? '✅' : (newStatus === 'SL' ? '🛑' : '🟰');
+                const details = [
+                    found.paire ? String(found.paire) : undefined,
+                    found.direction ? String(found.direction) : undefined,
+                    `Risque ${Math.round((((Number(found.risk)||0) > 1 ? Number(found.risk)/100 : (Number(found.risk)||0))/0.01)*10)/10}%`,
+                    `Entrée ${found.entree}`,
+                    `SL ${found.sl}`,
+                    `TP ${found.tp}`,
+                    `RR ${found.rr}`
+                ].filter(Boolean).join(' · ');
+                const embed = new EmbedBuilder()
+                    .setColor(color)
+                    .setTitle(`Trade clôturé: ${newStatus} ${statusEmoji}`)
+                    .addFields(
+                        { name: 'Détails', value: details, inline: false },
+                        { name: 'Trades', value: String(stats.total), inline: true },
+                        { name: 'Winrate', value: `${stats.winrate}%`, inline: true },
+                        { name: 'RR cumulé', value: `${stats.rrSum.toFixed(1)}r`, inline: true }
+                    )
+                    .setTimestamp();
+                if (msg) await msg.reply({ embeds: [embed] });
+                if (thread) {
+                    const rrText = `${stats.rrSum >= 0 ? '+' : ''}${Number(stats.rrSum).toFixed(1)}r`;
+                    const member = await interaction.guild.members.fetch(ownerId).catch(() => null);
+                    const display = member ? member.displayName : 'Calls';
+                    const allCount = (data[guildId]?.users?.[ownerId]?.trades || []).length;
+                    const newName = `${display} | ${allCount} Calls | ${rrText}`.slice(0, 100);
+                    await thread.setName(newName).catch(() => {});
+                }
+            } catch (_) {}
+
+            return interaction.editReply({ content: `Trade ${shortIdInput} mis à jour en ${newStatus}.` });
         }
     }
 };
