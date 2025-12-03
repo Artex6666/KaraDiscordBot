@@ -651,6 +651,28 @@ module.exports = {
                     const newName = `${display} | ${allCount} Calls | ${rrText}`.slice(0, 100);
                     await thread.setName(newName).catch(() => {});
                 }
+
+                // Envoyer un embed de récapitulatif public dans le salon
+                try {
+                    const stats = computeUserStats(data[guildId], ownerId);
+                    const recapEmbed = new EmbedBuilder()
+                        .setColor(0xFAA81A)
+                        .setTitle('📝 Mise à jour de trade')
+                        .addFields(
+                            { name: 'Trade ID', value: shortIdInput, inline: true },
+                            { name: 'Utilisateur', value: `<@${ownerId}>`, inline: true },
+                            { name: 'Modifications', value: changes.join('\n') || 'Aucune', inline: false },
+                            { name: 'Paire', value: found.paire || 'N/A', inline: true },
+                            { name: 'Direction', value: found.direction || 'N/A', inline: true },
+                            { name: 'Statut', value: found.status || 'OPEN', inline: true },
+                            { name: 'Risque', value: `${Math.round((((Number(found.risk)||0) > 1 ? Number(found.risk)/100 : (Number(found.risk)||0))/0.01)*10)/10}%`, inline: true },
+                            { name: 'RR', value: String(found.rr || 'N/A'), inline: true },
+                            { name: 'Stats globales', value: `Trades: ${stats.total} • Winrate: ${stats.winrate}% • RR cumulé: ${stats.rrSum.toFixed(1)}r`, inline: false }
+                        )
+                        .setFooter({ text: `Modifié par ${interaction.user.tag}` })
+                        .setTimestamp();
+                    await interaction.channel.send({ embeds: [recapEmbed] });
+                } catch (_) {}
             } catch (_) {}
 
             return interaction.editReply({ content: `Trade ${shortIdInput} mis à jour: ${changes.join(', ')}.` });
