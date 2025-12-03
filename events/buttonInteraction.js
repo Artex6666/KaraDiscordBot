@@ -26,18 +26,18 @@ client.on('interactionCreate', async interaction => {
 
     const button = client.buttons.get(interaction.customId);
     if (button) {
-        try {
-            if(button.permissions) {
-                if(!interaction.memberPermissions.has(PermissionsBitField.resolve(button.permissions || []))) {
-                    const perms = new EmbedBuilder()
-                    .setDescription(`🚫 ${interaction.user}, You don't have \`${button.permissions}\` permissions to interact this button!`)
-                    .setColor('Red')
-                    return interaction.reply({ embeds: [perms], ephemeral: true })
-                }
+    try {
+        if(button.permissions) {
+            if(!interaction.memberPermissions.has(PermissionsBitField.resolve(button.permissions || []))) {
+                const perms = new EmbedBuilder()
+                .setDescription(`🚫 ${interaction.user}, You don't have \`${button.permissions}\` permissions to interact this button!`)
+                .setColor('Red')
+                return interaction.reply({ embeds: [perms], ephemeral: true })
             }
+        }
             return await button.run(client, interaction);
-        } catch (error) {
-            console.log(error);
+    } catch (error) {
+        console.log(error);
         }
         return;
     }

@@ -10,10 +10,10 @@ const {
     PermissionsBitField
 } = require('discord.js');
 
-const GUILD_ID = '1071775065626132500';
-const ADMIN_ROLE_TO_MENTION = '1259915050936963176';
-const ADMIN_SEND_CHANNEL_ID = '1224388877595447376';
-const INIT_ALLOWED_CHANNEL_ID = '1431276942426116126';
+const GUILD_ID = process.env.GUILD_ID || '1071775065626132500';
+const ADMIN_ROLE_TO_MENTION = process.env.ADMIN_ROLE_TO_MENTION || '1259915050936963176';
+const ADMIN_SEND_CHANNEL_ID = process.env.ADMIN_SEND_CHANNEL_ID || '1224388877595447376';
+const INIT_ALLOWED_CHANNEL_ID = process.env.INIT_ALLOWED_CHANNEL_ID || '1431276942426116126';
 
 const servConfigPath = path.resolve('/home/omni/KaraBot/servConfig.json');
 const callDataPath = path.resolve('/home/omni/KaraBot/callData.json');
@@ -134,6 +134,23 @@ module.exports = {
             options: [
                 { name: 'user', description: 'Utilisateur cible (si vide: tous ou fil courant)', type: 6, required: false }
             ]
+        },
+        {
+            name: 'tradeupdate',
+            description: 'Mettre à jour un trade (statut, risque, RR)',
+            type: 1,
+            options: [
+                { name: 'trade_id', description: 'ID court du trade (visible dans le footer)', type: 3, required: true },
+                { name: 'status', description: 'Nouveau statut', type: 3, required: false, choices: [
+                    { name: 'TP', value: 'TP' },
+                    { name: 'SL', value: 'SL' },
+                    { name: 'BE', value: 'BE' },
+                    { name: 'CANCEL', value: 'CANCEL' }
+                ]},
+                { name: 'risk', description: 'Nouveau risque en % (ex: 2.5)', type: 10, required: false },
+                { name: 'rr', description: 'Nouveau RR (ex: 3.5)', type: 10, required: false },
+                { name: 'user', description: 'Utilisateur cible (si hors fil)', type: 6, required: false }
+            ]
         }
     ],
     default_member_permissions: null,
@@ -201,6 +218,21 @@ module.exports = {
 
             const pinned = await thread.send({ embeds: [welcome], components: [row] });
             await pinned.pin();
+
+            // Envoyer l'embed explicatif des émojis
+            const emojiGuide = new EmbedBuilder()
+                .setColor(0xED4245)
+                .setTitle('📖 Guide des émojis')
+                .setDescription('Utilisez les réactions sur les messages de trades pour clôturer vos positions:')
+                .addFields(
+                    { name: '✅ TP', value: 'Take Profit - Position fermée en profit', inline: true },
+                    { name: '🛑 SL', value: 'Stop Loss - Position fermée en perte', inline: true },
+                    { name: '🟰 BE', value: 'Break Even - Position fermée à l\'équilibre', inline: true },
+                    { name: '❌ CANCEL', value: 'Annulation - Trade annulé (ne compte pas dans les stats)', inline: true }
+                )
+                .setFooter({ text: 'Seul l\'auteur du call ou un admin peut clôturer une position' });
+            const guideMsg = await thread.send({ embeds: [emojiGuide] });
+            await guideMsg.pin();
 
             return interaction.reply({ content: `Fil créé: <#${thread.id}>`, flags: 64 });
         }
@@ -500,14 +532,14 @@ module.exports = {
             }
         }
 
-        if (sub === 'edittrade') {
-            if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-                return interaction.reply({ content: 'Réservé aux administrateurs.', flags: 64 });
-            }
+        if (sub === 'tradeupdate') {
             await interaction.deferReply({ flags: 64 }).catch(() => {});
-            const shortIdInput = interaction.options.getString('id').trim().toUpperCase();
+            const shortIdInput = interaction.options.getString('trade_id').trim().toUpperCase();
             const newStatus = interaction.options.getString('status');
+            const newRisk = interaction.options.getNumber('risk');
+            const newRr = interaction.options.getNumber('rr');
             const explicitUser = interaction.options.getUser('user');
+            const isAdmin = interaction.member.permissions.has(PermissionsBitField.Flags.Administrator);
             const data = readJsonSafe(callDataPath);
             const guildData = data[guildId] || { users: {} };
             let targetUserId = explicitUser?.id || null;
@@ -532,44 +564,86 @@ module.exports = {
                 const t = (udata.trades || []).find(tr => (tr.shortId || '').toUpperCase() === shortIdInput);
                 if (t) { found = t; ownerId = uid; break; }
             }
+
             if (!found) {
-                return interaction.editReply({ content: `Trade introuvable pour l’ID: ${shortIdInput}` });
+                return interaction.editReply({ content: `Trade introuvable pour l'ID: ${shortIdInput}` });
             }
-            if (!['TP','SL','BE'].includes(newStatus)) {
-                return interaction.editReply({ content: `Statut invalide. Utilise TP, SL ou BE.` });
+
+            // Vérifier les permissions: admin ou auteur dans son fil
+            if (!isAdmin && ownerId !== userId) {
+                return interaction.editReply({ content: `Vous ne pouvez modifier que vos propres trades ou être admin.` });
             }
-            found.status = newStatus;
-            found.closedAt = Date.now();
+            if (!isAdmin && targetUserId && targetUserId !== userId) {
+                return interaction.editReply({ content: `Vous ne pouvez modifier que vos propres trades.` });
+            }
+
+            // Aucune modification demandée
+            if (!newStatus && newRisk == null && newRr == null) {
+                return interaction.editReply({ content: `Aucune modification demandée. Spécifiez status, risk ou rr.` });
+            }
+
+            let changes = [];
+            if (newStatus) {
+                if (!['TP','SL','BE','CANCEL'].includes(newStatus)) {
+                    return interaction.editReply({ content: `Statut invalide. Utilise TP, SL, BE ou CANCEL.` });
+                }
+                found.status = newStatus;
+                if (newStatus !== 'OPEN') {
+                    found.closedAt = found.closedAt || Date.now();
+                }
+                changes.push(`Statut: ${newStatus}`);
+            }
+            if (newRisk != null) {
+                if (newRisk <= 0 || newRisk > 100) {
+                    return interaction.editReply({ content: `Risque invalide. Doit être entre 0 et 100.` });
+                }
+                found.risk = newRisk / 100;
+                changes.push(`Risque: ${newRisk}%`);
+            }
+            if (newRr != null) {
+                if (newRr < 0) {
+                    return interaction.editReply({ content: `RR invalide. Doit être >= 0.` });
+                }
+                found.rr = Math.round(newRr * 100) / 100;
+                changes.push(`RR: ${found.rr}`);
+            }
+
             writeJsonSafe(callDataPath, data);
 
+            // Mettre à jour le message et le fil si possible
             try {
                 const threadId = userThreads[ownerId];
                 const thread = threadId ? (interaction.guild.channels.cache.get(threadId) || await interaction.guild.channels.fetch(threadId).catch(() => null)) : null;
                 const msg = (thread && found.messageId) ? (await thread.messages.fetch(found.messageId).catch(() => null)) : null;
-                const stats = computeUserStats(data[guildId], ownerId);
-                const color = 0xFAA81A;
-                const statusEmoji = newStatus === 'TP' ? '✅' : (newStatus === 'SL' ? '🛑' : '🟰');
-                const details = [
-                    found.paire ? String(found.paire) : undefined,
-                    found.direction ? String(found.direction) : undefined,
-                    `Risque ${Math.round((((Number(found.risk)||0) > 1 ? Number(found.risk)/100 : (Number(found.risk)||0))/0.01)*10)/10}%`,
-                    `Entrée ${found.entree}`,
-                    `SL ${found.sl}`,
-                    `TP ${found.tp}`,
-                    `RR ${found.rr}`
-                ].filter(Boolean).join(' · ');
-                const embed = new EmbedBuilder()
-                    .setColor(color)
-                    .setTitle(`Trade clôturé: ${newStatus} ${statusEmoji}`)
-                    .addFields(
-                        { name: 'Détails', value: details, inline: false },
-                        { name: 'Trades', value: String(stats.total), inline: true },
-                        { name: 'Winrate', value: `${stats.winrate}%`, inline: true },
-                        { name: 'RR cumulé', value: `${stats.rrSum.toFixed(1)}r`, inline: true }
-                    )
-                    .setTimestamp();
-                if (msg) await msg.reply({ embeds: [embed] });
+
+                if (newStatus && newStatus !== 'OPEN') {
+                    const stats = computeUserStats(data[guildId], ownerId);
+                    const color = 0xFAA81A;
+                    const statusEmoji = newStatus === 'TP' ? '✅' : (newStatus === 'SL' ? '🛑' : (newStatus === 'BE' ? '🟰' : '❌'));
+                    const details = [
+                        found.paire ? String(found.paire) : undefined,
+                        found.direction ? String(found.direction) : undefined,
+                        `Risque ${Math.round((((Number(found.risk)||0) > 1 ? Number(found.risk)/100 : (Number(found.risk)||0))/0.01)*10)/10}%`,
+                        `Entrée ${found.entree}`,
+                        `SL ${found.sl}`,
+                        `TP ${found.tp}`,
+                        `RR ${found.rr}`
+                    ].filter(Boolean).join(' · ');
+                    const embed = new EmbedBuilder()
+                        .setColor(color)
+                        .setTitle(`Trade clôturé: ${newStatus} ${statusEmoji}`)
+                        .addFields(
+                            { name: 'Détails', value: details, inline: false },
+                            { name: 'Trades', value: String(stats.total), inline: true },
+                            { name: 'Winrate', value: `${stats.winrate}%`, inline: true },
+                            { name: 'RR cumulé', value: `${stats.rrSum.toFixed(1)}r`, inline: true }
+                        )
+                        .setTimestamp();
+                    if (msg) await msg.reply({ embeds: [embed] });
+                }
+
                 if (thread) {
+                    const stats = computeUserStats(data[guildId], ownerId);
                     const rrText = `${stats.rrSum >= 0 ? '+' : ''}${Number(stats.rrSum).toFixed(1)}r`;
                     const member = await interaction.guild.members.fetch(ownerId).catch(() => null);
                     const display = member ? member.displayName : 'Calls';
@@ -579,7 +653,7 @@ module.exports = {
                 }
             } catch (_) {}
 
-            return interaction.editReply({ content: `Trade ${shortIdInput} mis à jour en ${newStatus}.` });
+            return interaction.editReply({ content: `Trade ${shortIdInput} mis à jour: ${changes.join(', ')}.` });
         }
     }
 };
